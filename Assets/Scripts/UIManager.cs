@@ -17,11 +17,16 @@ namespace ZoneWars.Unity
 
         private void Update()
         {
+            RefreshUI();
+        }
+
+        public void RefreshUI()
+        {
             if (statsManager != null)
             {
                 originText.text = "Origin: " + statsManager.playerProfile.originPath;
                 alignmentText.text = "Alignment: " + statsManager.playerProfile.currentAlignment;
-                powerText.text = "Power Level: " + statsManager.stats.PowerLevel;
+                powerText.text = "Power Level: " + statsManager.PowerLevel;
             }
 
             if (planetHubManager != null)

@@ -5,13 +5,15 @@ This guide describes the concrete scene layout, GameObjects, and component wirin
 ## Scene: `OriginSelectionScene`
 
 ### Root objects
-- `GameManager`
+- `ZoneWarsGameManager`
   - Components:
-    - `GameFlowManager`
+    - `ZoneWarsGameManager`
     - `PlayerStatsManager`
     - `AbilitySystem`
     - `MissionManager`
     - `PlanetHubManager`
+    - `UIManager`
+    - `OriginSelectionUI`
 - `UIManager`
   - Components:
     - `UIManager`
@@ -61,12 +63,12 @@ This guide describes the concrete scene layout, GameObjects, and component wirin
 ## Scene: `PlanetHubScene`
 
 ### Root objects
-- `HubManager`
-  - Components: `PlanetHubManager`, `MissionManager`, `UIManager`
+- `ZoneWarsGameManager`
+  - Components: `ZoneWarsGameManager`, `PlanetHubManager`, `MissionManager`, `AbilitySystem`, `PlayerStatsManager`, `UIManager`
 - `Player` with `PlayerFlightController` and `CombatController`
 - `Environment` (placeholder geometry)
 - `MissionBoard`
-  - Components: `MissionDisplay` script (optional), references `MissionManager`
+  - Components: `PlanetHubUI` or `MissionDisplay` script (optional), references `MissionManager`
 
 ### Recommended layout
 - Use a simple terrain mesh or cube platform.
@@ -83,6 +85,7 @@ This guide describes the concrete scene layout, GameObjects, and component wirin
 ## Notes on scene transitions
 - Use `SceneManager.LoadScene("PlanetHubScene")` after origin selection or mission completion.
 - Keep scene-specific objects small and reuse the same `GameManager` data with a persistent `DontDestroyOnLoad` object if desired.
+- Add `OriginSelectionScene` and `PlanetHubScene` to Unity Build Settings so `SceneManager.LoadScene` can load them correctly.
 
 ## Sample inspector data
 - `AbilitySystem.abilityLibrary`

@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace ZoneWars.Unity
@@ -44,6 +45,12 @@ namespace ZoneWars.Unity
                 new PlanetDefinition { planetName = "Zenotra", planetType = PlanetType.AlienWorld, requiredPowerLevel = 20, isUnlocked = false, description = "Advanced alien civilization with dangerous defenders." },
                 new PlanetDefinition { planetName = "Nexion", planetType = PlanetType.CanonInspired, requiredPowerLevel = 35, isUnlocked = false, description = "A war-torn world caught between rebellion and empire." }
             };
+        }
+
+        public void InitializePlanets(List<PlanetDefinition> sourcePlanets)
+        {
+            planets = new List<PlanetDefinition>(sourcePlanets);
+            currentPlanet = planets.Find(p => p.planetName == "Earth") ?? planets.FirstOrDefault();
         }
 
         public void UnlockPlanets()

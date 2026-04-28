@@ -8,6 +8,11 @@ namespace ZoneWars.Unity
     {
         public List<MissionDefinition> allMissions = new List<MissionDefinition>();
 
+        public void LoadMissions(List<MissionDefinition> missions)
+        {
+            allMissions = new List<MissionDefinition>(missions);
+        }
+
         public List<MissionDefinition> GetAvailableMissions(PlayerProfile player)
         {
             return allMissions

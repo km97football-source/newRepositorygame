@@ -26,11 +26,16 @@ namespace ZoneWars.Unity
         public List<AbilityDefinition> abilityLibrary = new List<AbilityDefinition>();
         public List<AbilityDefinition> unlockedAbilities = new List<AbilityDefinition>();
 
+        public void LoadAbilities(List<AbilityDefinition> abilities)
+        {
+            abilityLibrary = new List<AbilityDefinition>(abilities);
+        }
+
         public void UnlockAbilities(PlayerStatsManager statsManager)
         {
             foreach (var ability in abilityLibrary)
             {
-                if (!unlockedAbilities.Contains(ability) && statsManager.stats.PowerLevel >= ability.requiredPowerLevel)
+                if (!unlockedAbilities.Contains(ability) && statsManager.playerProfile.powerLevel >= ability.requiredPowerLevel)
                 {
                     if (ability.alignmentRequirement == PlayerAlignment.Hybrid || ability.alignmentRequirement == statsManager.playerProfile.currentAlignment)
                     {

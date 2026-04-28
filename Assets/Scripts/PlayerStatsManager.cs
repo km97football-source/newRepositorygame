@@ -20,6 +20,8 @@ namespace ZoneWars.Unity
         public PlayerProfile playerProfile;
         public PlayerStats stats;
 
+        public int PowerLevel => playerProfile != null ? playerProfile.powerLevel : 0;
+
         public void Awake()
         {
             if (playerProfile == null)
