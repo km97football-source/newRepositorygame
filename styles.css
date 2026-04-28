@@ -117,6 +117,49 @@ button:hover,
   border: 1px solid rgba(110, 190, 255, 0.35);
 }
 
+.ability-card {
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  margin-bottom: 8px;
+  border-radius: 12px;
+  background: rgba(29, 45, 75, 0.92);
+}
+
+.ability-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: grid;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  background: rgba(255, 255, 255, 0.08);
+  color: #c7e0ff;
+}
+
+.ability-card.locked {
+  opacity: 0.65;
+}
+
+.ending-panel {
+  max-width: 700px;
+  margin: 32px auto;
+  text-align: center;
+}
+
+#ending-summary {
+  min-height: 180px;
+}
+
+#restart-button {
+  margin-top: 20px;
+  padding: 14px 24px;
+  font-size: 1rem;
+}
+
 .game-panel {
   display: grid;
   gap: 16px;
