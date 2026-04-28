@@ -19,15 +19,12 @@ ZoneWars is a 3D open-world action RPG concept inspired by Invincible. The game 
 - `docs/UNITY_SCENE_SETUP.md` - concrete Unity scene layout and wiring instructions.
 - `src/ZoneWarsCore.cs` - C# game architecture skeleton for core gameplay systems.
 
-## Unity Project Scaffold
-- `Assets/Scenes/OriginSelectionScene.unity`
-- `Assets/Scenes/PlanetHubScene.unity`
-- `Assets/Scripts/` with prototype Unity scripts for movement, combat, missions, UI, and progression.
-- `Packages/manifest.json` with Unity package dependencies.
-- `ProjectSettings/ProjectVersion.txt` using Unity 2021.3.
+## Web Prototype
+- `index.html` — playable 2D browser version of ZoneWars.
+- `styles.css` — layout and combat UI styling.
+- `game.js` — core 2D gameplay logic with origin selection, missions, combat, and progression.
 
 ## Next Steps
-- Open the project in Unity.
-- Create the origin selection and hub UI using the scene setup guide.
-- Attach the created scripts to GameObjects and wire references through the inspector.
-- Prototype flight, combat, and mission progression in a small test scene.
+- Open `index.html` in a browser to play the 2D prototype.
+- Use the on-screen controls to select your origin, choose missions, and fight enemies.
+- Prototype flight, combat, and mission progression instantly in the browser.

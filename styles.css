@@ -1,0 +1,150 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #07121f;
+  color: #e9f4ff;
+  font-family: Inter, system-ui, sans-serif;
+}
+
+#app {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+h1 {
+  margin: 0;
+  font-size: 2.4rem;
+}
+
+h2, h3 {
+  margin: 0 0 12px;
+}
+
+.screen {
+  display: none;
+}
+
+.screen.active {
+  display: block;
+}
+
+.panel {
+  background: rgba(10, 25, 45, 0.96);
+  border: 1px solid rgba(120, 170, 255, 0.18);
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+button,
+.secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 8px 4px 0 0;
+  padding: 12px 18px;
+  background: #1f3a5a;
+  color: #e9f4ff;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: transform 0.16s ease, background 0.16s ease;
+}
+
+button:hover,
+.secondary-button:hover {
+  transform: translateY(-1px);
+  background: #2a4d76;
+}
+
+.menu-note {
+  margin-top: 16px;
+  color: #9bb0d2;
+  line-height: 1.6;
+}
+
+.info-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.hub-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.95rem;
+}
+
+.log-box {
+  min-height: 120px;
+  background: rgba(8, 18, 33, 0.94);
+  border: 1px solid rgba(120, 170, 255, 0.18);
+  border-radius: 12px;
+  padding: 12px;
+  overflow-y: auto;
+  white-space: pre-line;
+}
+
+.list {
+  min-height: 120px;
+  max-height: 260px;
+  overflow-y: auto;
+  background: rgba(8, 18, 33, 0.94);
+  border: 1px solid rgba(120, 170, 255, 0.18);
+  border-radius: 12px;
+  padding: 10px;
+}
+
+.list-item {
+  padding: 12px;
+  margin-bottom: 8px;
+  border-radius: 12px;
+  background: rgba(19, 33, 58, 0.9);
+  cursor: pointer;
+}
+
+.list-item.selected {
+  background: rgba(90, 150, 255, 0.16);
+  border: 1px solid rgba(110, 190, 255, 0.35);
+}
+
+.game-panel {
+  display: grid;
+  gap: 16px;
+}
+
+#game-canvas {
+  width: 100%;
+  border-radius: 16px;
+  background: radial-gradient(circle at center, #1f334a 0%, #09131f 65%, #02080f 100%);
+}
+
+.game-info,
+.controls {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  background: rgba(8, 18, 33, 0.94);
+  border: 1px solid rgba(120, 170, 255, 0.18);
+  border-radius: 12px;
+}
+
+@media (min-width: 1100px) {
+  main {
+    display: flex;
+    gap: 20px;
+  }
+
+  .info-panel, .mission-panel {
+    flex: 1;
+  }
+}
