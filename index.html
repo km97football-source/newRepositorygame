@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Analog Ascent</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="game-app">
+    <canvas id="viewport"></canvas>
+
+    <div id="hud">
+      <div class="hud-row">
+        <div id="floor-label">FLOOR 01</div>
+        <div id="status-text">ENTER to begin</div>
+      </div>
+      <div class="hud-row">
+        <div class="meter-group">
+          <span>HEALTH</span>
+          <div id="health-bar"><span id="health-fill"></span></div>
+        </div>
+        <div class="meter-group">
+          <span>AMMO</span>
+          <div id="ammo-count">12 / 36</div>
+        </div>
+      </div>
+      <div class="hud-row bottom-row">
+        <div id="radar-panel">
+          <canvas id="radar-canvas" width="160" height="160"></canvas>
+          <div class="radar-label">RADAR</div>
+        </div>
+        <div id="controls">WASD move · Q/E strafe · A/D turn · LEFT CLICK shoot · R reload · ENTER elevator</div>
+      </div>
+    </div>
+
+    <div id="intro-overlay" class="overlay">
+      <div class="panel">
+        <div class="panel-title">WELCOME TO ANALOG ASCENT</div>
+        <div class="panel-subtitle">A first-person horror survival shooter experience.</div>
+        <div class="hint">Click anywhere to step into the elevator and descend to the first floor.</div>
+        <button id="enter-elevator-button" class="action-button">Enter Elevator</button>
+      </div>
+    </div>
+
+    <div id="overlay" class="overlay hidden">
+      <div id="elevator-hub" class="panel">
+        <div class="panel-title">ELEVATOR HUB</div>
+        <div class="panel-subtitle">Old industrial shaft | Safe zone</div>
+        <div class="info-row"><span>Floor</span><strong id="hub-floor">1</strong></div>
+        <div class="info-row"><span>Theme</span><strong id="hub-theme">Abandoned Mall</strong></div>
+        <div class="info-row"><span>Enemies</span><strong id="hub-enemies">1</strong></div>
+        <div class="hint">The elevator holds you briefly before the floor drops you into danger.</div>
+        <div class="footer">Press ENTER to descend when you are ready.</div>
+      </div>
+    </div>
+
+    <div id="gameover-overlay" class="overlay hidden">
+      <div class="panel">
+        <div class="panel-title">GAME OVER</div>
+        <div class="panel-subtitle" id="gameover-text">You were consumed by the darkness.</div>
+        <button id="restart-button" class="action-button">Restart Run</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>
+adsss
