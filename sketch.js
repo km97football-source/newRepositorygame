@@ -1,17 +1,17 @@
 // =====================================================
-// COLLAPSING ARENA - MATTER.JS VERSION
+// COLLAPSING ARENA - LEVEL SYSTEM VERSION
 // =====================================================
 
 // =====================================================
-// MODULE ALIASES
+// MODULES
 // =====================================================
 
-var Engine = Matter.Engine,
-	Runner = Matter.Runner,
-	Bodies = Matter.Bodies,
-	Body = Matter.Body,
-	Composite = Matter.Composite,
-	Events = Matter.Events;
+var Engine = Matter.Engine;
+var Runner = Matter.Runner;
+var Bodies = Matter.Bodies;
+var Body = Matter.Body;
+var Composite = Matter.Composite;
+var Events = Matter.Events;
 
 // =====================================================
 // ENGINE
@@ -32,7 +32,6 @@ let ground;
 
 let wallLeft;
 let wallRight;
-let wallTop;
 
 // =====================================================
 // GAME VARIABLES
@@ -99,11 +98,13 @@ function setup() {
 		windowHeight
 	);
 
-	// =========================================
+	// =================================================
 	// ENGINE
-	// =========================================
+	// =================================================
 
 	engine = Engine.create();
+
+	engine.world.gravity.y = 1;
 
 	runner = Runner.create();
 
@@ -112,9 +113,9 @@ function setup() {
 		engine
 	);
 
-	// =========================================
+	// =================================================
 	// PLAYER
-	// =========================================
+	// =================================================
 
 	player = Bodies.rectangle(
 
@@ -127,17 +128,15 @@ function setup() {
 		40,
 
 		{
-			friction: 0.05,
-
-			restitution: 0.1,
+			isStatic: true,
 
 			inertia: Infinity
 		}
 	);
 
-	// =========================================
+	// =================================================
 	// WALLS
-	// =========================================
+	// =================================================
 
 	ground = Bodies.rectangle(
 
@@ -184,24 +183,9 @@ function setup() {
 		}
 	);
 
-	wallTop = Bodies.rectangle(
-
-		width / 2,
-
-		height / 2 - arenaSize / 2,
-
-		arenaSize,
-
-		40,
-
-		{
-			isStatic: true
-		}
-	);
-
-	// =========================================
+	// =================================================
 	// ADD OBJECTS
-	// =========================================
+	// =================================================
 
 	Composite.add(
 
@@ -211,14 +195,13 @@ function setup() {
 			player,
 			ground,
 			wallLeft,
-			wallRight,
-			wallTop
+			wallRight
 		]
 	);
 
-	// =========================================
+	// =================================================
 	// COLLISION
-	// =========================================
+	// =================================================
 
 	Events.on(
 
@@ -344,8 +327,6 @@ function drawBodies() {
 		player.position.y
 	);
 
-	rotate(player.angle);
-
 	rectMode(CENTER);
 
 	noStroke();
@@ -377,6 +358,8 @@ function drawBodies() {
 
 	fill(255, 100, 100);
 
+	noStroke();
+
 	for (let b of blocks) {
 
 		push();
@@ -391,8 +374,11 @@ function drawBodies() {
 		rectMode(CENTER);
 
 		rect(
+
 			0,
+
 			0,
+
 			b.bounds.max.x -
 			b.bounds.min.x,
 
@@ -412,68 +398,69 @@ function updatePlayer() {
 
 	let speed =
 		abilities.speedBoost
-			? 0.006
-			: 0.003;
+			? 12
+			: 8;
+
+	let moveX = 0;
+	let moveY = 0;
 
 	if (keyIsDown(87)) {
 
-		Body.applyForce(
-
-			player,
-
-			player.position,
-
-			{
-				x: 0,
-				y: -speed
-			}
-		);
+		moveY -= speed;
 	}
 
 	if (keyIsDown(83)) {
 
-		Body.applyForce(
-
-			player,
-
-			player.position,
-
-			{
-				x: 0,
-				y: speed
-			}
-		);
+		moveY += speed;
 	}
 
 	if (keyIsDown(65)) {
 
-		Body.applyForce(
-
-			player,
-
-			player.position,
-
-			{
-				x: -speed,
-				y: 0
-			}
-		);
+		moveX -= speed;
 	}
 
 	if (keyIsDown(68)) {
 
-		Body.applyForce(
-
-			player,
-
-			player.position,
-
-			{
-				x: speed,
-				y: 0
-			}
-		);
+		moveX += speed;
 	}
+
+	Body.setPosition(player, {
+
+		x:
+			player.position.x +
+			moveX,
+
+		y:
+			player.position.y +
+			moveY
+	});
+
+	// KEEP PLAYER INSIDE ARENA
+
+	Body.setPosition(player, {
+
+		x: constrain(
+
+			player.position.x,
+
+			width / 2 -
+			arenaSize / 2 + 30,
+
+			width / 2 +
+			arenaSize / 2 - 30
+		),
+
+		y: constrain(
+
+			player.position.y,
+
+			height / 2 -
+			arenaSize / 2 + 30,
+
+			height / 2 +
+			arenaSize / 2 - 30
+		)
+	});
 }
 
 // =====================================================
@@ -482,26 +469,116 @@ function updatePlayer() {
 
 function spawnBlocks() {
 
-	let spawnRate =
-		max(12, 50 - survivalTime * 2);
+	// =========================================
+	// LEVEL SYSTEM
+	// =========================================
+
+	let level = 1;
+
+	if (survivalTime > 20) {
+
+		level = 2;
+	}
+
+	if (survivalTime > 40) {
+
+		level = 3;
+	}
+
+	if (survivalTime > 60) {
+
+		level = 4;
+	}
+
+	if (survivalTime > 90) {
+
+		level = 5;
+	}
+
+	// =========================================
+	// DIFFICULTY SETTINGS
+	// =========================================
+
+	let spawnRate = 60;
+
+	let minFallSpeed = 3;
+	let maxFallSpeed = 5;
+
+	let trackingStrength = 0.003;
+
+	// LEVEL 2
+
+	if (level === 2) {
+
+		spawnRate = 50;
+
+		minFallSpeed = 4;
+		maxFallSpeed = 6;
+
+		trackingStrength = 0.004;
+	}
+
+	// LEVEL 3
+
+	if (level === 3) {
+
+		spawnRate = 40;
+
+		minFallSpeed = 5;
+		maxFallSpeed = 7;
+
+		trackingStrength = 0.005;
+	}
+
+	// LEVEL 4
+
+	if (level === 4) {
+
+		spawnRate = 30;
+
+		minFallSpeed = 6;
+		maxFallSpeed = 8;
+
+		trackingStrength = 0.006;
+	}
+
+	// LEVEL 5
+
+	if (level === 5) {
+
+		spawnRate = 22;
+
+		minFallSpeed = 7;
+		maxFallSpeed = 10;
+
+		trackingStrength = 0.007;
+	}
+
+	// =========================================
+	// SPAWN
+	// =========================================
 
 	if (
-		frameCount % floor(spawnRate) === 0
+		frameCount % spawnRate === 0
 	) {
 
 		let size =
 			random(40, 120);
 
+		let spawnX =
+			random(
+
+				width / 2 -
+				arenaSize / 2 + 80,
+
+				width / 2 +
+				arenaSize / 2 - 80
+			);
+
 		let block =
 			Bodies.rectangle(
 
-				random(
-					width / 2 -
-					arenaSize / 2 + 80,
-
-					width / 2 +
-					arenaSize / 2 - 80
-				),
+				spawnX,
 
 				-100,
 
@@ -510,13 +587,36 @@ function spawnBlocks() {
 				size,
 
 				{
-					friction: 0.02,
+					friction: 0,
 
-					restitution: 0.2,
+					frictionAir: 0,
 
-					density: 0.01
+					restitution: 0.1,
+
+					density: 0.001
 				}
 			);
+
+		// =====================================
+		// TRACK PLAYER SLOWLY
+		// =====================================
+
+		let directionX =
+			player.position.x -
+			spawnX;
+
+		Body.setVelocity(block, {
+
+			x:
+				directionX *
+				trackingStrength,
+
+			y:
+				random(
+					minFallSpeed,
+					maxFallSpeed
+				)
+		});
 
 		blocks.push(block);
 
@@ -539,14 +639,16 @@ function removeBlocks() {
 		i--
 	) {
 
+		let b = blocks[i];
+
 		if (
-			blocks[i].position.y >
-			height + 300
+			b.position.y >
+			height - 40
 		) {
 
 			Composite.remove(
 				engine.world,
-				blocks[i]
+				b
 			);
 
 			blocks.splice(i, 1);
@@ -584,24 +686,22 @@ function autoDodge() {
 				player.position.y -
 				b.position.y;
 
-			Body.applyForce(
+			Body.setPosition(player, {
 
-				player,
+				x:
+					player.position.x +
+					dx * 0.08,
 
-				player.position,
-
-				{
-					x: dx * 0.0008,
-
-					y: dy * 0.0008
-				}
-			);
+				y:
+					player.position.y +
+					dy * 0.08
+			});
 		}
 	}
 }
 
 // =====================================================
-// ARENA
+// ARENA SHRINK
 // =====================================================
 
 function updateArena() {
@@ -616,6 +716,34 @@ function updateArena() {
 
 		arenaSize =
 			max(220, arenaSize);
+
+		Body.setPosition(
+
+			wallLeft,
+
+			{
+				x:
+					width / 2 -
+					arenaSize / 2,
+
+				y:
+					height / 2
+			}
+		);
+
+		Body.setPosition(
+
+			wallRight,
+
+			{
+				x:
+					width / 2 +
+					arenaSize / 2,
+
+				y:
+					height / 2
+			}
+		);
 	}
 }
 
@@ -663,6 +791,7 @@ function drawHUD() {
 	textAlign(LEFT);
 
 	text(
+
 		"TIME: " +
 		survivalTime.toFixed(1),
 
@@ -691,6 +820,7 @@ function drawHUD() {
 	}
 
 	text(
+
 		"PR: " +
 		best.toFixed(1),
 
@@ -698,6 +828,41 @@ function drawHUD() {
 
 		80
 	);
+
+	// LEVEL DISPLAY
+
+	let level = 1;
+
+	if (survivalTime > 20) level = 2;
+
+	if (survivalTime > 40) level = 3;
+
+	if (survivalTime > 60) level = 4;
+
+	if (survivalTime > 90) level = 5;
+
+	text(
+
+		"LEVEL: " + level,
+
+		20,
+
+		120
+	);
+
+	if (invincible) {
+
+		fill(255, 255, 0);
+
+		text(
+
+			"INVINCIBLE",
+
+			20,
+
+			160
+		);
+	}
 }
 
 // =====================================================
@@ -988,14 +1153,6 @@ function resetGame() {
 		{
 			x: width / 2,
 			y: height / 2
-		}
-	);
-
-	Body.setVelocity(
-		player,
-		{
-			x: 0,
-			y: 0
 		}
 	);
 
