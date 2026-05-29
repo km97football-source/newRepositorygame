@@ -1,5 +1,5 @@
 // =====================================================
-// COLLAPSING ARENA - LEVEL SYSTEM VERSION
+// COLLAPSING ARENA - FULL WORKING VERSION
 // =====================================================
 
 // =====================================================
@@ -200,7 +200,7 @@ function setup() {
 	);
 
 	// =================================================
-	// COLLISION
+	// COLLISIONS
 	// =================================================
 
 	Events.on(
@@ -211,8 +211,6 @@ function setup() {
 
 		function(event) {
 
-			if (invincible) return;
-
 			let pairs = event.pairs;
 
 			for (let pair of pairs) {
@@ -220,20 +218,52 @@ function setup() {
 				let bodyA = pair.bodyA;
 				let bodyB = pair.bodyB;
 
+				// =====================================
+				// PLAYER HIT
+				// =====================================
+
+				if (!invincible) {
+
+					if (
+						(bodyA === player &&
+						blocks.includes(bodyB)) ||
+
+						(bodyB === player &&
+						blocks.includes(bodyA))
+					) {
+
+						state = "gameover";
+					}
+				}
+
+				// =====================================
+				// REMOVE BLOCKS
+				// =====================================
+
 				if (
-					bodyA === player ||
-					bodyB === player
+					(bodyA === ground &&
+					blocks.includes(bodyB)) ||
+
+					(bodyB === ground &&
+					blocks.includes(bodyA))
 				) {
 
-					for (let block of blocks) {
+					let block =
+						bodyA === ground
+							? bodyB
+							: bodyA;
 
-						if (
-							bodyA === block ||
-							bodyB === block
-						) {
+					Composite.remove(
+						engine.world,
+						block
+					);
 
-							state = "gameover";
-						}
+					let index =
+						blocks.indexOf(block);
+
+					if (index !== -1) {
+
+						blocks.splice(index, 1);
 					}
 				}
 			}
@@ -297,8 +327,6 @@ function runGame() {
 	updateInvincibility();
 
 	spawnBlocks();
-
-	removeBlocks();
 
 	if (abilities.ultraInstinct) {
 
@@ -469,94 +497,49 @@ function updatePlayer() {
 
 function spawnBlocks() {
 
-	// =========================================
-	// LEVEL SYSTEM
-	// =========================================
-
 	let level = 1;
 
-	if (survivalTime > 20) {
-
-		level = 2;
-	}
-
-	if (survivalTime > 40) {
-
-		level = 3;
-	}
-
-	if (survivalTime > 60) {
-
-		level = 4;
-	}
-
-	if (survivalTime > 90) {
-
-		level = 5;
-	}
-
-	// =========================================
-	// DIFFICULTY SETTINGS
-	// =========================================
+	if (survivalTime > 20) level = 2;
+	if (survivalTime > 40) level = 3;
+	if (survivalTime > 60) level = 4;
+	if (survivalTime > 90) level = 5;
 
 	let spawnRate = 60;
 
-	let minFallSpeed = 3;
-	let maxFallSpeed = 5;
-
-	let trackingStrength = 0.003;
-
-	// LEVEL 2
+	let minFallSpeed = 5;
+	let maxFallSpeed = 8;
 
 	if (level === 2) {
 
 		spawnRate = 50;
 
-		minFallSpeed = 4;
-		maxFallSpeed = 6;
-
-		trackingStrength = 0.004;
+		minFallSpeed = 6;
+		maxFallSpeed = 9;
 	}
-
-	// LEVEL 3
 
 	if (level === 3) {
 
 		spawnRate = 40;
 
-		minFallSpeed = 5;
-		maxFallSpeed = 7;
-
-		trackingStrength = 0.005;
+		minFallSpeed = 7;
+		maxFallSpeed = 10;
 	}
-
-	// LEVEL 4
 
 	if (level === 4) {
 
 		spawnRate = 30;
 
-		minFallSpeed = 6;
-		maxFallSpeed = 8;
-
-		trackingStrength = 0.006;
+		minFallSpeed = 8;
+		maxFallSpeed = 12;
 	}
-
-	// LEVEL 5
 
 	if (level === 5) {
 
 		spawnRate = 22;
 
-		minFallSpeed = 7;
-		maxFallSpeed = 10;
-
-		trackingStrength = 0.007;
+		minFallSpeed = 10;
+		maxFallSpeed = 14;
 	}
-
-	// =========================================
-	// SPAWN
-	// =========================================
 
 	if (
 		frameCount % spawnRate === 0
@@ -587,36 +570,36 @@ function spawnBlocks() {
 				size,
 
 				{
-					friction: 0,
+					friction: 0.05,
 
-					frictionAir: 0,
+					restitution: 0.2,
 
-					restitution: 0.1,
-
-					density: 0.001
+					density: 0.002
 				}
 			);
 
 		// =====================================
-		// TRACK PLAYER SLOWLY
+		// MAKE BLOCKS FALL
 		// =====================================
-
-		let directionX =
-			player.position.x -
-			spawnX;
 
 		Body.setVelocity(block, {
 
-			x:
-				directionX *
-				trackingStrength,
+			x: random(-2, 2),
 
-			y:
-				random(
-					minFallSpeed,
-					maxFallSpeed
-				)
+			y: random(
+				minFallSpeed,
+				maxFallSpeed
+			)
 		});
+
+		// =====================================
+		// RANDOM SPIN
+		// =====================================
+
+		Body.setAngularVelocity(
+			block,
+			random(-0.1, 0.1)
+		);
 
 		blocks.push(block);
 
@@ -624,35 +607,6 @@ function spawnBlocks() {
 			engine.world,
 			block
 		);
-	}
-}
-
-// =====================================================
-// REMOVE BLOCKS
-// =====================================================
-
-function removeBlocks() {
-
-	for (
-		let i = blocks.length - 1;
-		i >= 0;
-		i--
-	) {
-
-		let b = blocks[i];
-
-		if (
-			b.position.y >
-			height - 40
-		) {
-
-			Composite.remove(
-				engine.world,
-				b
-			);
-
-			blocks.splice(i, 1);
-		}
 	}
 }
 
@@ -829,16 +783,11 @@ function drawHUD() {
 		80
 	);
 
-	// LEVEL DISPLAY
-
 	let level = 1;
 
 	if (survivalTime > 20) level = 2;
-
 	if (survivalTime > 40) level = 3;
-
 	if (survivalTime > 60) level = 4;
-
 	if (survivalTime > 90) level = 5;
 
 	text(
@@ -1157,6 +1106,8 @@ function resetGame() {
 	);
 
 	survivalTime = 0;
+
+	arenaSize = 900;
 
 	state = "game";
 
