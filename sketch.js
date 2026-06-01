@@ -40,8 +40,8 @@ let wallRight;
 let survivalTime = 0;
 
 let state = "menu";
-
-let arenaSize = 900;
+let arenaSize;
+let initialArenaSize;
 
 let shrinkTimer = 0;
 
