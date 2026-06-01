@@ -7,6 +7,7 @@
 // =====================================================
 
 var Engine = Matter.Engine;
+var Render = Matter.Render;
 var Runner = Matter.Runner;
 var Bodies = Matter.Bodies;
 var Body = Matter.Body;
@@ -19,6 +20,7 @@ var Events = Matter.Events;
 
 let engine;
 let runner;
+let render;
 
 // =====================================================
 // GAME OBJECTS
@@ -93,61 +95,63 @@ let invincibleBtn;
 
 function setup() {
 
-	createCanvas(
-		windowWidth,
-		windowHeight
-	);
-
+	
 	// =================================================
 	// ENGINE
 	// =================================================
-
+	
 	engine = Engine.create();
-
+	
 	engine.world.gravity.y = 1;
+	render = Render.create({
+		element: document.body,
+		engine: engine,
+		options: {
+			width: innerWidth,
+			height: innerHeight,
+			wireframes: false, // <-- important
+		}
+	});
+	
+	createCanvas(windowWidth, windowHeight, render.canvas)
 
-	runner = Runner.create();
-
-	Runner.run(
-		runner,
-		engine
-	);
-
+	
 	// =================================================
 	// PLAYER
 	// =================================================
-
+	
 	player = Bodies.rectangle(
-
+		
 		width / 2,
-
+		
 		height / 2,
-
+		
 		40,
 
-		40,
+		40, {
 
-		{
 			isStatic: true,
-
-			inertia: Infinity
-		}
+			inertia: Infinity,
+			render: {
+				fillStyle: '#2C50D9'
+			}
+	}
 	);
 
 	// =================================================
 	// WALLS
 	// =================================================
-
+	
 	ground = Bodies.rectangle(
 
 		width / 2,
-
+		
 		height + 20,
-
+		
 		width,
 
 		40,
-
+		
 		{
 			isStatic: true
 		}
@@ -156,9 +160,9 @@ function setup() {
 	wallLeft = Bodies.rectangle(
 
 		width / 2 - arenaSize / 2,
-
+		
 		height / 2,
-
+		
 		40,
 
 		arenaSize,
@@ -167,30 +171,30 @@ function setup() {
 			isStatic: true
 		}
 	);
-
+	
 	wallRight = Bodies.rectangle(
 
 		width / 2 + arenaSize / 2,
 
 		height / 2,
-
+		
 		40,
-
+		
 		arenaSize,
-
+		
 		{
 			isStatic: true
 		}
 	);
-
+	
 	// =================================================
 	// ADD OBJECTS
 	// =================================================
-
+	
 	Composite.add(
-
+		
 		engine.world,
-
+		
 		[
 			player,
 			ground,
@@ -202,40 +206,40 @@ function setup() {
 	// =================================================
 	// COLLISIONS
 	// =================================================
-
+	
 	Events.on(
-
+		
 		engine,
 
 		"collisionStart",
-
+		
 		function(event) {
 
 			let pairs = event.pairs;
-
+			
 			for (let pair of pairs) {
-
+				
 				let bodyA = pair.bodyA;
 				let bodyB = pair.bodyB;
-
+				
 				// =====================================
 				// PLAYER HIT
 				// =====================================
-
+				
 				if (!invincible) {
-
+					
 					if (
 						(bodyA === player &&
-						blocks.includes(bodyB)) ||
-
-						(bodyB === player &&
+							blocks.includes(bodyB)) ||
+							
+							(bodyB === player &&
 						blocks.includes(bodyA))
 					) {
 
 						state = "gameover";
 					}
 				}
-
+				
 				// =====================================
 				// REMOVE BLOCKS
 				// =====================================
@@ -243,25 +247,25 @@ function setup() {
 				if (
 					(bodyA === ground &&
 					blocks.includes(bodyB)) ||
-
+					
 					(bodyB === ground &&
 					blocks.includes(bodyA))
 				) {
-
+					
 					let block =
 						bodyA === ground
-							? bodyB
-							: bodyA;
+						? bodyB
+						: bodyA;
 
-					Composite.remove(
+						Composite.remove(
 						engine.world,
 						block
 					);
 
 					let index =
 						blocks.indexOf(block);
-
-					if (index !== -1) {
+						
+						if (index !== -1) {
 
 						blocks.splice(index, 1);
 					}
@@ -269,9 +273,18 @@ function setup() {
 			}
 		}
 	);
+	
+		// run the renderer
+	Render.run(render);
+	runner = Runner.create();
+	
+	Runner.run(
+		runner,
+		engine
+	);
 
 	setupButtons();
-
+	
 	updateUI();
 }
 
@@ -281,10 +294,10 @@ function setup() {
 
 function draw() {
 
-	background(10);
-
+	// background(10);
+	
 	if (state === "menu") {
-
+		
 		drawMenu();
 
 		return;
@@ -322,7 +335,7 @@ function runGame() {
 
 	updatePlayer();
 
-	updateArena();
+	// updateArena();
 
 	updateInvincibility();
 
@@ -333,11 +346,11 @@ function runGame() {
 		autoDodge();
 	}
 
-	drawBodies();
+	// drawBodies();
 
 	drawHUD();
 
-	drawArena();
+	// drawArena();
 }
 
 // =====================================================
@@ -401,18 +414,7 @@ function drawBodies() {
 
 		rectMode(CENTER);
 
-		rect(
 
-			0,
-
-			0,
-
-			b.bounds.max.x -
-			b.bounds.min.x,
-
-			b.bounds.max.y -
-			b.bounds.min.y
-		);
 
 		pop();
 	}
@@ -570,11 +572,14 @@ function spawnBlocks() {
 				size,
 
 				{
-					friction: 0.05,
+					friction: random(0.1, 0.5),
 
 					restitution: 0.2,
 
-					density: 0.002
+					density: 0.002,
+					render: {
+						fillStyle: '#eb5904'
+					}
 				}
 			);
 
