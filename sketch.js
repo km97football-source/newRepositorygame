@@ -1,1137 +1,581 @@
 // =====================================================
-// COLLAPSING ARENA - FULL WORKING VERSION
+// SURVIVAL WORLD 3D - BUILDING VERSION
+// FULL COPY/PASTE FOR OPENPROCESSING
 // =====================================================
 
-// =====================================================
-// MODULES
-// =====================================================
+let terrain = [];
+let cols, rows;
+let scl = 40;
+let worldSize = 120;
 
-var Engine = Matter.Engine;
-var Render = Matter.Render;
-var Runner = Matter.Runner;
-var Bodies = Matter.Bodies;
-var Body = Matter.Body;
-var Composite = Matter.Composite;
-var Events = Matter.Events;
+let playerX = 0;
+let playerZ = 0;
+let playerAngle = 0;
+let moveSpeed = 10;
 
-// =====================================================
-// ENGINE
-// =====================================================
+let trees = [];
+let rocks = [];
+let buildings = [];
 
-let engine;
-let runner;
-let render;
+let buildMode = "wood";
 
-// =====================================================
-// GAME OBJECTS
-// =====================================================
+let timeOfDay = 0;
 
-let player;
-
-let blocks = [];
-
-let ground;
-
-let wallLeft;
-let wallRight;
-
-// =====================================================
-// GAME VARIABLES
-// =====================================================
-
-let survivalTime = 0;
-
-let state = "menu";
-let arenaSize;
-let initialArenaSize;
-
-let shrinkTimer = 0;
-
-// =====================================================
-// ABILITIES
-// =====================================================
-
-let abilities = {
-
-	speedBoost: false,
-
-	smallPlayer: false,
-
-	ultraInstinct: false
+let inventory = {
+  wood: 0,
+  stone: 0
 };
 
-// =====================================================
-// INVINCIBILITY
-// =====================================================
-
-let invincible = false;
-
-let invincibleDuration = 7000;
-
-let invincibleCooldown = 10000;
-
-let invincibleStartTime = 0;
-
-let invincibleCooldownStart = 0;
-
-let canUseInvincible = true;
-
-// =====================================================
-// BUTTONS
-// =====================================================
-
-let playBtn;
-let shopBtn;
-let backBtn;
-
-let speedBtn;
-let smallBtn;
-let ultraBtn;
-let invincibleBtn;
-
-// =====================================================
-// SETUP
-// =====================================================
-
 function setup() {
+  createCanvas(windowWidth, windowHeight, WEBGL);
 
-	
-	// =================================================
-	// ENGINE
-	// =================================================
-	
-	engine = Engine.create();
-	
-	engine.world.gravity.y = 1;
-	render = Render.create({
-		element: document.body,
-		engine: engine,
-		options: {
-			width: innerWidth,
-			height: innerHeight,
-			wireframes: false, // <-- important
-		}
-	});
-	
-	createCanvas(windowWidth, windowHeight, render.canvas)
+  cols = worldSize;
+  rows = worldSize;
 
-	
-	// =================================================
-	// PLAYER
-	// =================================================
-	
-	player = Bodies.rectangle(
-		
-		width / 2,
-		
-		height / 2,
-		
-		40,
-
-		40, {
-
-			isStatic: true,
-			inertia: Infinity,
-			render: {
-				fillStyle: '#2C50D9'
-			}
-	}
-	);
-
-	// =================================================
-	// WALLS
-	// =================================================
-	
-	ground = Bodies.rectangle(
-
-		width / 2,
-		
-		height + 20,
-		
-		width,
-
-		40,
-		
-		{
-			isStatic: true
-		}
-	);
-
-	wallLeft = Bodies.rectangle(
-
-		width / 2 - arenaSize / 2,
-		
-		height / 2,
-		
-		40,
-
-		arenaSize,
-
-		{
-			isStatic: true
-		}
-	);
-	
-	wallRight = Bodies.rectangle(
-
-		width / 2 + arenaSize / 2,
-
-		height / 2,
-		
-		40,
-		
-		arenaSize,
-		
-		{
-			isStatic: true
-		}
-	);
-	
-	// =================================================
-	// ADD OBJECTS
-	// =================================================
-	
-	Composite.add(
-		
-		engine.world,
-		
-		[
-			player,
-			ground,
-			wallLeft,
-			wallRight
-		]
-	);
-
-	// =================================================
-	// COLLISIONS
-	// =================================================
-	
-	Events.on(
-		
-		engine,
-
-		"collisionStart",
-		
-		function(event) {
-
-			let pairs = event.pairs;
-			
-			for (let pair of pairs) {
-				
-				let bodyA = pair.bodyA;
-				let bodyB = pair.bodyB;
-				
-				// =====================================
-				// PLAYER HIT
-				// =====================================
-				
-				if (!invincible) {
-					
-					if (
-						(bodyA === player &&
-							blocks.includes(bodyB)) ||
-							
-							(bodyB === player &&
-						blocks.includes(bodyA))
-					) {
-
-						state = "gameover";
-					}
-				}
-				
-				// =====================================
-				// REMOVE BLOCKS
-				// =====================================
-
-				if (
-					(bodyA === ground &&
-					blocks.includes(bodyB)) ||
-					
-					(bodyB === ground &&
-					blocks.includes(bodyA))
-				) {
-					
-					let block =
-						bodyA === ground
-						? bodyB
-						: bodyA;
-
-						Composite.remove(
-						engine.world,
-						block
-					);
-
-					let index =
-						blocks.indexOf(block);
-						
-						if (index !== -1) {
-
-						blocks.splice(index, 1);
-					}
-				}
-			}
-		}
-	);
-	
-		// run the renderer
-	Render.run(render);
-	runner = Runner.create();
-	
-	Runner.run(
-		runner,
-		engine
-	);
-
-	setupButtons();
-	
-	updateUI();
+  generateTerrain();
+  generateObjects();
 }
-
-// =====================================================
-// DRAW
-// =====================================================
 
 function draw() {
 
-	// background(10);
-	
-	if (state === "menu") {
-		
-		drawMenu();
+  updateTime();
 
-		return;
-	}
+  let sky = map(
+    sin(timeOfDay),
+    -1,
+    1,
+    20,
+    180
+  );
 
-	if (state === "shop") {
+  background(
+    sky,
+    sky + 30,
+    sky + 50
+  );
 
-		drawShop();
+  camera(
+    playerX,
+    -350,
+    playerZ + 350,
 
-		return;
-	}
+    playerX,
+    0,
+    playerZ,
 
-	if (state === "game") {
+    0,
+    1,
+    0
+  );
 
-		runGame();
+  ambientLight(120);
 
-		return;
-	}
+  directionalLight(
+    255,
+    255,
+    220,
+    -1,
+    1,
+    -1
+  );
 
-	if (state === "gameover") {
+  drawTerrain();
+  drawTrees();
+  drawRocks();
+  drawBuildings();
 
-		drawGameOver();
+  drawPlayer();
 
-		return;
-	}
+  checkGathering();
+
+  resetMatrix();
+  camera();
+
+  drawUI();
+}
+
+function updateTime() {
+  timeOfDay += 0.002;
 }
 
 // =====================================================
-// GAME LOOP
+// TERRAIN
 // =====================================================
 
-function runGame() {
+function generateTerrain() {
 
-	survivalTime += deltaTime / 1000;
+  let yoff = 0;
 
-	updatePlayer();
+  for (let y = 0; y < rows; y++) {
 
-	// updateArena();
+    terrain[y] = [];
 
-	updateInvincibility();
+    let xoff = 0;
 
-	spawnBlocks();
+    for (let x = 0; x < cols; x++) {
 
-	if (abilities.ultraInstinct) {
+      terrain[y][x] = map(
+        noise(xoff, yoff),
+        0,
+        1,
+        -120,
+        120
+      );
 
-		autoDodge();
-	}
+      xoff += 0.08;
+    }
 
-	// drawBodies();
+    yoff += 0.08;
+  }
+}
 
-	drawHUD();
+function drawTerrain() {
 
-	// drawArena();
+  push();
+
+  rotateX(PI / 3);
+
+  translate(
+    -cols * scl / 2,
+    -rows * scl / 2
+  );
+
+  noStroke();
+
+  for (let y = 0; y < rows - 1; y++) {
+
+    beginShape(TRIANGLE_STRIP);
+
+    for (let x = 0; x < cols; x++) {
+
+      fill(
+        40,
+        130 + terrain[y][x] * 0.2,
+        50
+      );
+
+      vertex(
+        x * scl,
+        y * scl,
+        terrain[y][x]
+      );
+
+      vertex(
+        x * scl,
+        (y + 1) * scl,
+        terrain[y + 1][x]
+      );
+    }
+
+    endShape();
+  }
+
+  pop();
 }
 
 // =====================================================
-// DRAW BODIES
+// OBJECTS
 // =====================================================
 
-function drawBodies() {
+function generateObjects() {
 
-	// PLAYER
+  for (let i = 0; i < 300; i++) {
 
-	push();
+    trees.push({
+      x: random(-2000, 2000),
+      z: random(-2000, 2000),
+      size: random(30, 70)
+    });
+  }
 
-	translate(
-		player.position.x,
-		player.position.y
-	);
+  for (let i = 0; i < 120; i++) {
 
-	rectMode(CENTER);
-
-	noStroke();
-
-	if (invincible) {
-
-		fill(255, 255, 0);
-
-	} else {
-
-		fill(0, 255, 255);
-	}
-
-	let playerSize =
-		abilities.smallPlayer
-			? 25
-			: 40;
-
-	rect(
-		0,
-		0,
-		playerSize,
-		playerSize
-	);
-
-	pop();
-
-	// BLOCKS
-
-	fill(255, 100, 100);
-
-	noStroke();
-
-	for (let b of blocks) {
-
-		push();
-
-		translate(
-			b.position.x,
-			b.position.y
-		);
-
-		rotate(b.angle);
-
-		rectMode(CENTER);
-
-
-
-		pop();
-	}
+    rocks.push({
+      x: random(-2000, 2000),
+      z: random(-2000, 2000),
+      size: random(20, 50)
+    });
+  }
 }
 
 // =====================================================
-// PLAYER MOVEMENT
+// TREES
 // =====================================================
 
-function updatePlayer() {
+function drawTrees() {
 
-	let speed =
-		abilities.speedBoost
-			? 12
-			: 8;
+  for (let t of trees) {
 
-	let moveX = 0;
-	let moveY = 0;
+    push();
 
-	if (keyIsDown(87)) {
+    translate(
+      t.x,
+      -20,
+      t.z
+    );
 
-		moveY -= speed;
-	}
+    fill(100, 70, 30);
 
-	if (keyIsDown(83)) {
+    cylinder(
+      t.size * 0.15,
+      t.size
+    );
 
-		moveY += speed;
-	}
+    translate(
+      0,
+      -t.size * 0.7,
+      0
+    );
 
-	if (keyIsDown(65)) {
+    fill(20, 130, 40);
 
-		moveX -= speed;
-	}
+    cone(
+      t.size * 0.7,
+      t.size * 1.6
+    );
 
-	if (keyIsDown(68)) {
-
-		moveX += speed;
-	}
-
-	Body.setPosition(player, {
-
-		x:
-			player.position.x +
-			moveX,
-
-		y:
-			player.position.y +
-			moveY
-	});
-
-	// KEEP PLAYER INSIDE ARENA
-
-	Body.setPosition(player, {
-
-		x: constrain(
-
-			player.position.x,
-
-			width / 2 -
-			arenaSize / 2 + 30,
-
-			width / 2 +
-			arenaSize / 2 - 30
-		),
-
-		y: constrain(
-
-			player.position.y,
-
-			height / 2 -
-			arenaSize / 2 + 30,
-
-			height / 2 +
-			arenaSize / 2 - 30
-		)
-	});
+    pop();
+  }
 }
 
 // =====================================================
-// SPAWN BLOCKS
+// ROCKS
 // =====================================================
 
-function spawnBlocks() {
+function drawRocks() {
 
-	let level = 1;
+  for (let r of rocks) {
 
-	if (survivalTime > 20) level = 2;
-	if (survivalTime > 40) level = 3;
-	if (survivalTime > 60) level = 4;
-	if (survivalTime > 90) level = 5;
+    push();
 
-	let spawnRate = 60;
+    translate(
+      r.x,
+      0,
+      r.z
+    );
 
-	let minFallSpeed = 5;
-	let maxFallSpeed = 8;
+    fill(130);
 
-	if (level === 2) {
+    sphere(
+      r.size * 0.5,
+      6,
+      6
+    );
 
-		spawnRate = 50;
-
-		minFallSpeed = 6;
-		maxFallSpeed = 9;
-	}
-
-	if (level === 3) {
-
-		spawnRate = 40;
-
-		minFallSpeed = 7;
-		maxFallSpeed = 10;
-	}
-
-	if (level === 4) {
-
-		spawnRate = 30;
-
-		minFallSpeed = 8;
-		maxFallSpeed = 12;
-	}
-
-	if (level === 5) {
-
-		spawnRate = 22;
-
-		minFallSpeed = 10;
-		maxFallSpeed = 14;
-	}
-
-	if (
-		frameCount % spawnRate === 0
-	) {
-
-		let size =
-			random(40, 120);
-
-		let spawnX =
-			random(
-
-				width / 2 -
-				arenaSize / 2 + 80,
-
-				width / 2 +
-				arenaSize / 2 - 80
-			);
-
-		let block =
-			Bodies.rectangle(
-
-				spawnX,
-
-				-100,
-
-				size,
-
-				size,
-
-				{
-					friction: random(0.1, 0.5),
-
-					restitution: 0.2,
-
-					density: 0.002,
-					render: {
-						fillStyle: '#eb5904'
-					}
-				}
-			);
-
-		// =====================================
-		// MAKE BLOCKS FALL
-		// =====================================
-
-		Body.setVelocity(block, {
-
-			x: random(-2, 2),
-
-			y: random(
-				minFallSpeed,
-				maxFallSpeed
-			)
-		});
-
-		// =====================================
-		// RANDOM SPIN
-		// =====================================
-
-		Body.setAngularVelocity(
-			block,
-			random(-0.1, 0.1)
-		);
-
-		blocks.push(block);
-
-		Composite.add(
-			engine.world,
-			block
-		);
-	}
+    pop();
+  }
 }
 
 // =====================================================
-// ULTRA INSTINCT
+// BUILDINGS
 // =====================================================
 
-function autoDodge() {
+function drawBuildings() {
 
-	for (let b of blocks) {
+  for (let b of buildings) {
 
-		let distance =
-			dist(
+    push();
 
-				player.position.x,
+    translate(
+      b.x,
+      -25,
+      b.z
+    );
 
-				player.position.y,
+    if (b.type === "wood") {
+      fill(160, 110, 60);
+    } else {
+      fill(140);
+    }
 
-				b.position.x,
+    box(50);
 
-				b.position.y
-			);
-
-		if (distance < 150) {
-
-			let dx =
-				player.position.x -
-				b.position.x;
-
-			let dy =
-				player.position.y -
-				b.position.y;
-
-			Body.setPosition(player, {
-
-				x:
-					player.position.x +
-					dx * 0.08,
-
-				y:
-					player.position.y +
-					dy * 0.08
-			});
-		}
-	}
+    pop();
+  }
 }
 
 // =====================================================
-// ARENA SHRINK
+// PLAYER
 // =====================================================
 
-function updateArena() {
+function drawPlayer() {
 
-	shrinkTimer++;
+  movePlayer();
 
-	if (shrinkTimer > 120) {
+  push();
 
-		shrinkTimer = 0;
+  translate(
+    playerX,
+    -10,
+    playerZ
+  );
 
-		arenaSize -= 8;
+  fill(0, 150, 255);
+  sphere(18);
 
-		arenaSize =
-			max(220, arenaSize);
+  push();
 
-		Body.setPosition(
+  rotateY(playerAngle);
 
-			wallLeft,
+  translate(
+    0,
+    0,
+    -25
+  );
 
-			{
-				x:
-					width / 2 -
-					arenaSize / 2,
+  fill(120, 80, 40);
 
-				y:
-					height / 2
-			}
-		);
+  box(
+    4,
+    4,
+    30
+  );
 
-		Body.setPosition(
+  translate(
+    8,
+    0,
+    -8
+  );
 
-			wallRight,
+  fill(180);
 
-			{
-				x:
-					width / 2 +
-					arenaSize / 2,
+  box(
+    10,
+    10,
+    4
+  );
 
-				y:
-					height / 2
-			}
-		);
-	}
+  pop();
+
+  pop();
+}
+
+function movePlayer() {
+
+  let dx = 0;
+  let dz = 0;
+
+  if (keyIsDown(87)) dz -= 1;
+  if (keyIsDown(83)) dz += 1;
+  if (keyIsDown(65)) dx -= 1;
+  if (keyIsDown(68)) dx += 1;
+
+  if (dx !== 0 || dz !== 0) {
+
+    let len = sqrt(
+      dx * dx +
+      dz * dz
+    );
+
+    dx /= len;
+    dz /= len;
+
+    playerX += dx * moveSpeed;
+    playerZ += dz * moveSpeed;
+
+    playerAngle =
+      atan2(dx, dz);
+  }
 }
 
 // =====================================================
-// INVINCIBILITY
+// GATHERING
 // =====================================================
 
-function updateInvincibility() {
+function checkGathering() {
 
-	if (
-		invincible &&
-		millis() -
-		invincibleStartTime >=
-		invincibleDuration
-	) {
+  if (!keyIsDown(69))
+    return;
 
-		invincible = false;
+  for (let t of trees) {
 
-		invincibleCooldownStart =
-			millis();
-	}
+    let d = dist(
+      playerX,
+      playerZ,
+      t.x,
+      t.z
+    );
 
-	if (
-		!canUseInvincible &&
-		!invincible &&
-		millis() -
-		invincibleCooldownStart >=
-		invincibleCooldown
-	) {
+    if (d < 80) {
 
-		canUseInvincible = true;
-	}
+      inventory.wood++;
+
+      t.x = random(-2000, 2000);
+      t.z = random(-2000, 2000);
+
+      break;
+    }
+  }
+
+  for (let r of rocks) {
+
+    let d = dist(
+      playerX,
+      playerZ,
+      r.x,
+      r.z
+    );
+
+    if (d < 80) {
+
+      inventory.stone++;
+
+      r.x = random(-2000, 2000);
+      r.z = random(-2000, 2000);
+
+      break;
+    }
+  }
 }
 
 // =====================================================
-// HUD
-// =====================================================
-
-function drawHUD() {
-
-	fill(255);
-
-	textSize(24);
-
-	textAlign(LEFT);
-
-	text(
-
-		"TIME: " +
-		survivalTime.toFixed(1),
-
-		20,
-
-		40
-	);
-
-	let best = Number(
-
-		localStorage.getItem(
-			"collapseArenaBest"
-		) || 0
-	);
-
-	if (survivalTime > best) {
-
-		localStorage.setItem(
-
-			"collapseArenaBest",
-
-			survivalTime
-		);
-
-		best = survivalTime;
-	}
-
-	text(
-
-		"PR: " +
-		best.toFixed(1),
-
-		20,
-
-		80
-	);
-
-	let level = 1;
-
-	if (survivalTime > 20) level = 2;
-	if (survivalTime > 40) level = 3;
-	if (survivalTime > 60) level = 4;
-	if (survivalTime > 90) level = 5;
-
-	text(
-
-		"LEVEL: " + level,
-
-		20,
-
-		120
-	);
-
-	if (invincible) {
-
-		fill(255, 255, 0);
-
-		text(
-
-			"INVINCIBLE",
-
-			20,
-
-			160
-		);
-	}
-}
-
-// =====================================================
-// DRAW ARENA
-// =====================================================
-
-function drawArena() {
-
-	noFill();
-
-	stroke(100, 180, 255);
-
-	strokeWeight(5);
-
-	rectMode(CENTER);
-
-	rect(
-
-		width / 2,
-
-		height / 2,
-
-		arenaSize,
-
-		arenaSize
-	);
-}
-
-// =====================================================
-// MENU
-// =====================================================
-
-function drawMenu() {
-
-	fill(255);
-
-	textAlign(CENTER);
-
-	textSize(70);
-
-	text(
-
-		"COLLAPSING ARENA",
-
-		width / 2,
-
-		height / 3
-	);
-
-	textSize(24);
-
-	text(
-
-		"Use WASD to survive",
-
-		width / 2,
-
-		height / 3 + 60
-	);
-}
-
-// =====================================================
-// SHOP
-// =====================================================
-
-function drawShop() {
-
-	fill(255);
-
-	textAlign(CENTER);
-
-	textSize(60);
-
-	text(
-		"SHOP",
-		width / 2,
-		120
-	);
-}
-
-// =====================================================
-// GAME OVER
-// =====================================================
-
-function drawGameOver() {
-
-	background(0, 180);
-
-	fill(255, 60, 60);
-
-	textAlign(CENTER);
-
-	textSize(70);
-
-	text(
-
-		"GAME OVER",
-
-		width / 2,
-
-		height / 2 - 40
-	);
-
-	fill(255);
-
-	textSize(30);
-
-	text(
-
-		"Press R to Restart",
-
-		width / 2,
-
-		height / 2 + 40
-	);
-}
-
-// =====================================================
-// BUTTONS
-// =====================================================
-
-function setupButtons() {
-
-	playBtn = createButton("PLAY");
-
-	playBtn.mousePressed(() => {
-
-		resetGame();
-
-		state = "game";
-
-		updateUI();
-	});
-
-	shopBtn = createButton("SHOP");
-
-	shopBtn.mousePressed(() => {
-
-		state = "shop";
-
-		updateUI();
-	});
-
-	backBtn = createButton("BACK");
-
-	backBtn.mousePressed(() => {
-
-		state = "menu";
-
-		updateUI();
-	});
-
-	speedBtn =
-		createButton("TOGGLE SPEED");
-
-	speedBtn.mousePressed(() => {
-
-		abilities.speedBoost =
-			!abilities.speedBoost;
-	});
-
-	smallBtn =
-		createButton("TOGGLE SMALL");
-
-	smallBtn.mousePressed(() => {
-
-		abilities.smallPlayer =
-			!abilities.smallPlayer;
-	});
-
-	ultraBtn =
-		createButton("TOGGLE ULTRA");
-
-	ultraBtn.mousePressed(() => {
-
-		abilities.ultraInstinct =
-			!abilities.ultraInstinct;
-	});
-
-	invincibleBtn =
-		createButton(
-			"INVINCIBILITY"
-		);
-
-	invincibleBtn.mousePressed(() => {
-
-		if (
-			canUseInvincible &&
-			!invincible
-		) {
-
-			invincible = true;
-
-			canUseInvincible = false;
-
-			invincibleStartTime =
-				millis();
-		}
-	});
-}
-
-// =====================================================
-// UPDATE UI
-// =====================================================
-
-function updateUI() {
-
-	playBtn.hide();
-	shopBtn.hide();
-	backBtn.hide();
-
-	speedBtn.hide();
-	smallBtn.hide();
-	ultraBtn.hide();
-	invincibleBtn.hide();
-
-	if (state === "menu") {
-
-		playBtn.show();
-
-		shopBtn.show();
-
-		playBtn.position(
-			width / 2 - 60,
-			height / 2 - 50
-		);
-
-		shopBtn.position(
-			width / 2 - 60,
-			height / 2 + 20
-		);
-	}
-
-	if (state === "shop") {
-
-		backBtn.show();
-
-		speedBtn.show();
-
-		smallBtn.show();
-
-		ultraBtn.show();
-
-		invincibleBtn.show();
-
-		backBtn.position(20, 20);
-
-		speedBtn.position(
-			width / 2 - 120,
-			height / 2 - 100
-		);
-
-		smallBtn.position(
-			width / 2 - 120,
-			height / 2 - 40
-		);
-
-		ultraBtn.position(
-			width / 2 - 120,
-			height / 2 + 20
-		);
-
-		invincibleBtn.position(
-			width / 2 - 120,
-			height / 2 + 80
-		);
-	}
-}
-
-// =====================================================
-// RESET GAME
-// =====================================================
-
-function resetGame() {
-
-	for (let b of blocks) {
-
-		Composite.remove(
-			engine.world,
-			b
-		);
-	}
-
-	blocks = [];
-
-	Body.setPosition(
-		player,
-		{
-			x: width / 2,
-			y: height / 2
-		}
-	);
-
-	survivalTime = 0;
-
-	arenaSize = 900;
-
-	state = "game";
-
-	invincible = false;
-
-	canUseInvincible = true;
-}
-
-// =====================================================
-// KEYS
+// BUILDING
 // =====================================================
 
 function keyPressed() {
 
-	if (
-		key === "r" ||
-		key === "R"
-	) {
+  if (key === "1") {
+    buildMode = "wood";
+  }
 
-		resetGame();
-	}
+  if (key === "2") {
+    buildMode = "stone";
+  }
+
+  if (key === "b" || key === "B") {
+
+    let buildX =
+      playerX +
+      sin(playerAngle) * 80;
+
+    let buildZ =
+      playerZ +
+      cos(playerAngle) * 80;
+
+    if (
+      buildMode === "wood" &&
+      inventory.wood > 0
+    ) {
+
+      inventory.wood--;
+
+      buildings.push({
+        x: buildX,
+        z: buildZ,
+        type: "wood"
+      });
+    }
+
+    if (
+      buildMode === "stone" &&
+      inventory.stone > 0
+    ) {
+
+      inventory.stone--;
+
+      buildings.push({
+        x: buildX,
+        z: buildZ,
+        type: "stone"
+      });
+    }
+  }
+}
+
+// =====================================================
+// UI
+// =====================================================
+
+function drawUI() {
+
+  push();
+
+  translate(
+    -width / 2,
+    -height / 2
+  );
+
+  noStroke();
+
+  fill(0, 180);
+
+  rect(
+    15,
+    15,
+    330,
+    310,
+    12
+  );
+
+  fill(255);
+
+  textSize(22);
+
+  text(
+    "SURVIVAL WORLD",
+    30,
+    45
+  );
+
+  text(
+    "Wood: " + inventory.wood,
+    30,
+    85
+  );
+
+  text(
+    "Stone: " + inventory.stone,
+    30,
+    115
+  );
+
+  text(
+    "Build Mode: " + buildMode,
+    30,
+    145
+  );
+
+  text(
+    "1 = Wood Mode",
+    30,
+    175
+  );
+
+  text(
+    "2 = Stone Mode",
+    30,
+    205
+  );
+
+  text(
+    "B = Place Block",
+    30,
+    235
+  );
+
+  text(
+    "WASD = Move",
+    30,
+    265
+  );
+
+  text(
+    "E = Gather",
+    30,
+    295
+  );
+
+  pop();
+}
+
+// =====================================================
+// RESIZE
+// =====================================================
+
+function windowResized() {
+
+  resizeCanvas(
+    windowWidth,
+    windowHeight
+  );
 }
