@@ -1,6 +1,6 @@
 // =====================================================
 // SURVIVAL WORLD 3D – MINECRAFT STYLE
-// Fixed: building, gathering, physics, perf, all bugs
+// Fixed: mouse inversion, added fly mode (G to toggle)
 // =====================================================
 
 // --- World ---
@@ -21,20 +21,23 @@ const SPRINT_MULT = 1.9;
 const PLAYER_HEIGHT = 80;
 const REACH = 320;
 
+// --- Fly mode ---
+let flyMode = false;
+const FLY_SPEED = 12;
+const FLY_SPRINT_MULT = 2.5;
+
 // --- Camera ---
 let yaw = 0;
 let pitch = 0;
 let pointerLocked = false;
 
 // --- Building ---
-// blockMap key = "x,y,z" -> block object for O(1) lookup
 let blocks = [];
 let blockMap = {};
 let blockSize = 50;
 let buildPreview  = null;
 let deletePreview = null;
 
-// Placement cooldown (frames) – prevents spam, allows hold-to-build
 const PLACE_COOLDOWN  = 6;
 let   placeCooldown   = 0;
 let   deleteCooldown  = 0;
@@ -52,9 +55,8 @@ let selectedSlot = 0;
 
 // --- Resources ---
 let inventory = { wood: 10, stone: 10 };
-// Per-tree/rock gather cooldown prevents multi-harvest per keypress
 let gatherCooldown = 0;
-const GATHER_CD = 18; // frames
+const GATHER_CD = 18;
 
 // --- Time ---
 let timeOfDay = 0;
@@ -64,7 +66,7 @@ let trees = [];
 let rocks = [];
 
 // =====================================================
-// BLOCK MAP HELPERS – O(1) lookup
+// BLOCK MAP HELPERS
 // =====================================================
 function blockKey(x, y, z) {
   return x + "," + y + "," + z;
@@ -72,7 +74,7 @@ function blockKey(x, y, z) {
 
 function addBlock(x, y, z, color) {
   let k = blockKey(x, y, z);
-  if (blockMap[k]) return false; // already occupied
+  if (blockMap[k]) return false;
   let b = { x, y, z, color };
   blocks.push(b);
   blockMap[k] = b;
@@ -106,15 +108,17 @@ function setup() {
   document.addEventListener("pointerlockchange", () => {
     pointerLocked = document.pointerLockElement === cnv;
   });
+
+  // FIX: negate movementX and movementY so mouse direction matches look direction
   document.addEventListener("mousemove", (e) => {
     if (!pointerLocked) return;
-    yaw   += e.movementX * 0.0022;
-    pitch += e.movementY * 0.0022;
+    yaw   -= e.movementX * 0.0022;   // was +=, now -= to fix left/right inversion
+    pitch -= e.movementY * 0.0022;   // was +=, now -= to fix up/down inversion
     pitch  = constrain(pitch, -PI / 2 + 0.05, PI / 2 - 0.05);
   });
+
   document.addEventListener("contextmenu", e => e.preventDefault());
 
-  // Scroll wheel to cycle hotbar
   document.addEventListener("wheel", (e) => {
     selectedSlot = (selectedSlot + (e.deltaY > 0 ? 1 : -1) + BLOCK_TYPES.length) % BLOCK_TYPES.length;
   });
@@ -137,15 +141,12 @@ function draw() {
   drawTrees();
   drawRocks();
 
-  // Draw placed blocks
   for (let b of blocks) drawBlock(b, false);
 
-  // Compute and draw preview
   computePreview();
   if (buildPreview)  drawBlock(buildPreview, true);
   if (deletePreview) drawBlockHighlight(deletePreview);
 
-  // Held-button building / deleting
   if (placeCooldown > 0)  placeCooldown--;
   if (deleteCooldown > 0) deleteCooldown--;
 
@@ -156,15 +157,17 @@ function draw() {
     if (tryDeleteBlock()) deleteCooldown = PLACE_COOLDOWN;
   }
 
-  // Physics
+  // Physics / movement
   movePlayer();
-  applyGravity();
+  if (flyMode) {
+    applyFly();
+  } else {
+    applyGravity();
+  }
 
-  // Gathering cooldown
   if (gatherCooldown > 0) gatherCooldown--;
   checkGathering();
 
-  // HUD
   resetMatrix();
   camera();
   noLights();
@@ -190,7 +193,7 @@ function applyCamera() {
 }
 
 // =====================================================
-// MOVEMENT + PHYSICS
+// MOVEMENT
 // =====================================================
 function movePlayer() {
   let speed = MOVE_SPEED * (keyIsDown(SHIFT) ? SPRINT_MULT : 1);
@@ -213,6 +216,21 @@ function movePlayer() {
   pz = constrain(pz + dz * speed, -worldD / 2, worldD / 2);
 }
 
+// =====================================================
+// FLY MODE – Space/Shift to go up/down
+// =====================================================
+function applyFly() {
+  velY = 0; // no gravity when flying
+  let speed = FLY_SPEED * (keyIsDown(SHIFT) ? FLY_SPRINT_MULT : 1);
+
+  // Space = ascend, Ctrl = descend (C key as alternative)
+  if (keyIsDown(32))  py -= speed; // Space: go up (y is inverted in p5 WEBGL)
+  if (keyIsDown(67))  py += speed; // C: go down
+}
+
+// =====================================================
+// GRAVITY (normal mode)
+// =====================================================
 function applyGravity() {
   velY += GRAVITY;
   py   += velY;
@@ -228,7 +246,6 @@ function applyGravity() {
     onGround = true;
   }
 
-  // Land on placed blocks
   for (let b of blocks) {
     let bTop = b.y - blockSize / 2;
     if (abs(px - b.x) < blockSize * 0.55 &&
@@ -245,19 +262,25 @@ function applyGravity() {
 // INPUT
 // =====================================================
 function keyPressed() {
-  if ((key === " " || keyCode === 32) && onGround) {
+  // Jump (only in non-fly mode)
+  if ((key === " " || keyCode === 32) && onGround && !flyMode) {
     velY     = JUMP_FORCE;
     onGround = false;
   }
+
+  // Toggle fly mode with G
+  if (key === "g" || key === "G") {
+    flyMode = !flyMode;
+    velY = 0;
+    showGatherMsg(flyMode ? "Fly mode ON  (Space=up  C=down)" : "Fly mode OFF");
+  }
+
   if (key >= "1" && key <= "7") selectedSlot = int(key) - 1;
 
-  // Keyboard fallbacks
   if (key === "f" || key === "F") tryPlaceBlock();
   if (key === "x" || key === "X") tryDeleteBlock();
 }
 
-// mousePressed is only for single clicks (not hold)
-// hold is handled in draw() above
 function mousePressed() {
   if (!pointerLocked) return;
   if (mouseButton === LEFT  && placeCooldown  === 0) { if (tryPlaceBlock())  placeCooldown  = PLACE_COOLDOWN; }
@@ -265,7 +288,7 @@ function mousePressed() {
 }
 
 // =====================================================
-// RAYCASTING – proper face-normal placement
+// RAYCASTING
 // =====================================================
 function computePreview() {
   buildPreview  = null;
@@ -279,7 +302,6 @@ function computePreview() {
   let rdy = sin(pitch);
   let rdz = cos(pitch) * cos(yaw);
 
-  // March along ray with fine steps
   let STEPS    = 80;
   let stepSize = REACH / STEPS;
 
@@ -299,7 +321,6 @@ function computePreview() {
     let hit = getBlock(sx, sy, sz);
     if (hit) {
       deletePreview = hit;
-      // Place on the face we entered from (previous grid cell)
       let bt = BLOCK_TYPES[selectedSlot];
       buildPreview = {
         x: prevX, y: prevY, z: prevZ,
@@ -311,7 +332,6 @@ function computePreview() {
     prevX = sx; prevY = sy; prevZ = sz;
   }
 
-  // No hit – show floating preview at reach end, snapped to grid
   let ex = eyeX + rdx * REACH;
   let ey = eyeY + rdy * REACH;
   let ez = eyeZ + rdz * REACH;
@@ -332,7 +352,6 @@ function snapG(v) {
 function tryPlaceBlock() {
   if (!buildPreview) return false;
 
-  // Don't place inside the player's bounding box
   let eyeY = py - PLAYER_HEIGHT;
   let dx   = abs(buildPreview.x - px);
   let dz   = abs(buildPreview.z - pz);
@@ -467,20 +486,18 @@ function drawRocks() {
 }
 
 // =====================================================
-// GATHERING – press E near a tree/rock once per cooldown
+// GATHERING
 // =====================================================
 const GATHER_RADIUS = 110;
 
 function checkGathering() {
   if (!keyIsDown(69) || gatherCooldown > 0) return;
 
-  // Trees
   for (let t of trees) {
     if (!t.alive) continue;
     if (dist(px, pz, t.x, t.z) < GATHER_RADIUS) {
-      inventory.wood += 3; // reward 3 logs per chop
+      inventory.wood += 3;
       t.alive = false;
-      // Respawn tree far away after a delay (simple: just relocate immediately)
       setTimeout(() => {
         t.x = random(-worldW/2, worldW/2);
         t.z = random(-worldD/2, worldD/2);
@@ -492,7 +509,6 @@ function checkGathering() {
     }
   }
 
-  // Rocks
   for (let r of rocks) {
     if (!r.alive) continue;
     if (dist(px, pz, r.x, r.z) < GATHER_RADIUS) {
@@ -510,12 +526,11 @@ function checkGathering() {
   }
 }
 
-// Floating gather message
 let gatherMsg = "";
 let gatherMsgTimer = 0;
 function showGatherMsg(msg) {
   gatherMsg = msg;
-  gatherMsgTimer = 90;
+  gatherMsgTimer = 120;
 }
 
 // =====================================================
@@ -525,22 +540,20 @@ function drawHUD() {
   push();
   translate(-width / 2, -height / 2);
 
-  // ---- Crosshair ----
+  // Crosshair
   stroke(255, 255, 255, 210);
   strokeWeight(1.5);
   let cx = width / 2, cy = height / 2;
   line(cx - 10, cy, cx + 10, cy);
   line(cx, cy - 10, cx, cy + 10);
-
-  // Dot in centre
   fill(255, 255, 255, 180);
   noStroke();
   ellipse(cx, cy, 3, 3);
 
-  // ---- Info panel top-left ----
+  // Info panel top-left
   noStroke();
   fill(0, 0, 0, 155);
-  rect(12, 12, 230, 145, 8);
+  rect(12, 12, 230, 165, 8);
   fill(255);
   textSize(14);
   textFont("monospace");
@@ -552,11 +565,14 @@ function drawHUD() {
   text(pointerLocked ? "LOCKED – ESC to free" : "Click to capture mouse", 24, 118);
   fill(200, 200, 255);
   text("E to gather  (nearby tree/rock)", 24, 140);
+  // Fly mode indicator
+  fill(flyMode ? color(120, 200, 255) : color(160, 160, 160));
+  text(flyMode ? "FLY  [G to land]" : "WALK [G to fly]", 24, 160);
 
-  // ---- Gather message popup ----
+  // Gather message popup
   if (gatherMsgTimer > 0) {
     gatherMsgTimer--;
-    let alpha = map(gatherMsgTimer, 0, 30, 0, 255);
+    let alpha = map(gatherMsgTimer, 0, 40, 0, 255);
     fill(80, 255, 120, alpha);
     textSize(22);
     textAlign(CENTER);
@@ -564,14 +580,13 @@ function drawHUD() {
     textAlign(LEFT);
   }
 
-  // ---- Hotbar ----
+  // Hotbar
   let slotSz  = 56;
   let padding = 6;
   let hotbarW = BLOCK_TYPES.length * slotSz + padding * 2;
   let hbX     = width / 2 - hotbarW / 2;
   let hbY     = height - 74;
 
-  // Hotbar background
   fill(0, 0, 0, 160);
   rect(hbX - padding, hbY - padding, hotbarW + padding, slotSz + padding * 3, 10);
 
@@ -581,25 +596,21 @@ function drawHUD() {
     let bt = BLOCK_TYPES[i];
     let sel = i === selectedSlot;
 
-    // Slot background
     fill(sel ? color(255, 220, 60, 220) : color(60, 60, 60, 180));
     stroke(sel ? color(255, 255, 255, 200) : color(120, 120, 120, 100));
     strokeWeight(sel ? 2 : 1);
     rect(sx, sy, slotSz - 6, slotSz - 4, 6);
 
-    // Block colour swatch
     noStroke();
     fill(bt.color[0], bt.color[1], bt.color[2]);
     rect(sx + 4, sy + 4, slotSz - 14, slotSz - 18, 4);
 
-    // Number & name
     fill(sel ? color(20, 20, 20) : color(200, 200, 200));
     textSize(9);
     textFont("monospace");
     textAlign(CENTER);
     text(i + 1, sx + (slotSz - 6) / 2, sy + slotSz - 7);
 
-    // Name tooltip on selected
     if (sel) {
       fill(255, 255, 100);
       textSize(12);
@@ -608,26 +619,28 @@ function drawHUD() {
   }
   textAlign(LEFT);
 
-  // ---- Controls panel bottom-right ----
+  // Controls panel bottom-right
   fill(0, 0, 0, 145);
-  rect(width - 218, height - 240, 206, 228, 8);
+  rect(width - 218, height - 258, 206, 246, 8);
   fill(180, 180, 180);
   textSize(12);
   textFont("monospace");
   let cr  = width - 206;
-  let cy2 = height - 225;
+  let cy2 = height - 243;
   let lh  = 18;
-  text("WASD        move",       cr, cy2);
-  text("SPACE       jump",       cr, cy2 + lh);
-  text("SHIFT       sprint",     cr, cy2 + lh * 2);
-  text("LMB / hold  place",      cr, cy2 + lh * 3);
-  text("RMB / hold  break",      cr, cy2 + lh * 4);
-  text("1-7         material",   cr, cy2 + lh * 5);
-  text("Scroll      material",   cr, cy2 + lh * 6);
-  text("E           gather",     cr, cy2 + lh * 7);
-  text("F           place (alt)",cr, cy2 + lh * 8);
-  text("X           break (alt)",cr, cy2 + lh * 9);
-  text("ESC         free mouse", cr, cy2 + lh * 10);
+  text("WASD        move",        cr, cy2);
+  text("SPACE       jump/up",     cr, cy2 + lh);
+  text("SHIFT       sprint",      cr, cy2 + lh * 2);
+  text("G           fly toggle",  cr, cy2 + lh * 3);
+  text("C           fly down",    cr, cy2 + lh * 4);
+  text("LMB / hold  place",       cr, cy2 + lh * 5);
+  text("RMB / hold  break",       cr, cy2 + lh * 6);
+  text("1-7         material",    cr, cy2 + lh * 7);
+  text("Scroll      material",    cr, cy2 + lh * 8);
+  text("E           gather",      cr, cy2 + lh * 9);
+  text("F           place (alt)", cr, cy2 + lh * 10);
+  text("X           break (alt)", cr, cy2 + lh * 11);
+  text("ESC         free mouse",  cr, cy2 + lh * 12);
 
   pop();
 }
